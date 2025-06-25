@@ -39,7 +39,7 @@ public void toString() {
 }
 ```
 
-## 2. Bad smell: Temporary Variables en promedioEdades
+## 2. Bad smell: Long method y Temporary Variables en promedioEdades
 ## Refactoring: Replace temp With Query
 Mecanica:
 * Verificar que la variable esté completamente determinada antes de ser usada, y que el código que la calcula no dé un valor distinto cada vez que se ejecuta.
@@ -52,7 +52,6 @@ Mecanica:
 * Usar el patrón Inline Variable para eliminar la variable temporal (o sea, llamar directamente al metodo donde se lo necesita)
 
 ```java
-
 private double calcularPromedioEdades() {
 	int totalEdades = 0;
 	for (Empleado empleado : personal) {
@@ -77,7 +76,7 @@ public void toString() {
 }
 ```
 
-## 3. Bad smell: Temporary Variables en totalSalarios
+## 3. Bad smell: Long method y Temporary Variables en totalSalarios
 ## Refactoring: Replace temp With Query
 Mecanica:
 * Verificar que la variable esté completamente determinada antes de ser usada, y que el código que la calcula no dé un valor distinto cada vez que se ejecuta.
@@ -90,7 +89,6 @@ Mecanica:
 * Usar el patrón Inline Variable para eliminar la variable temporal (o sea, llamar directamente al metodo donde se lo necesita).
 
 ```java
-
 private double calcularPromedioEdades() {
 	int totalEdades = 0;
 	for (Empleado empleado : personal) {
@@ -117,7 +115,7 @@ public void toString() {
 ```
 
 
-## 4. Bad smell: Temporary Variables en totalEdades
+## 4. Bad smell: Long method y Temporary Variables en totalEdades
 ## Refactoring: Replace temp With Query
 Mecanica:
 * Verificar que la variable esté completamente determinada antes de ser usada, y que el código que la calcula no dé un valor distinto cada vez que se ejecuta.
@@ -130,7 +128,6 @@ Mecanica:
 * Usar el patrón Inline Variable para eliminar la variable temporal (o sea, llamar directamente al metodo donde se lo necesita).
 
 ```java
-
 private double calcularTotalEdades(){
     int totalEdades = 0;
     for (Empleado empleado : personal) {
@@ -171,7 +168,6 @@ Mecanica:
 * Si el bucle usaba un acumulador, asignar el resultado del pipeline a esa variable.
 
 ```java
-
 private double calcularTotalEdades(){
     int totalEdades = 0;
     for (Empleado empleado : personal) {
@@ -215,7 +211,6 @@ Mecanica:
 * Si el bucle usaba un acumulador, asignar el resultado del pipeline a esa variable.
 
 ```java
-
 private double calcularTotalEdades() {
 	List<Empleado> empleados = personal;
 
