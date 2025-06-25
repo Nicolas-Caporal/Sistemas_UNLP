@@ -1,4 +1,4 @@
-# Ejercicio 1.1
+# Ejercicio 1.1 -  Protocolo de Cliente
 ```java
 /** 
 * Retorna el límite de crédito del cliente
