@@ -19,7 +19,7 @@ unsigned long tiempoUltimoInformeEstado = 0;
 const unsigned long intervaloEstado = 180000; // Cada 3 minutos informa el estado por telegram
 
 bool ventanaAbierta = false;
-bool ledEncendido = false;  // controla el motor/el LED
+bool ledEncendido = false;
 
 bool modoAutomatico = true;
 
@@ -30,6 +30,10 @@ unsigned long tiempoActual;
 
 unsigned long tiempoBotTelegram;
 
+unsigned long tiempoParpadeo = 0;
+bool estadoLED = false;
+int parpadeosRestantes = 0;
+
 void setup() {
   pinMode(LED_VENTANA, OUTPUT);
   digitalWrite(LED_VENTANA, LOW);
@@ -38,19 +42,24 @@ void setup() {
   delay(1000);
   Serial.println("INICIANDO PROGRAMA");
   conectarWiFi();
-  parpadearLED();
+  iniciarParpadeo(3);
   Serial.println("Todo OK ✅");
 }
 
 void loop() {
-  tiempoActual= millis();
+  tiempoActual = millis();
 
-  if (modoAutomatico){
-  // Simular temperatura cada 15 segundos 
+  // Manejo no bloqueante del parpadeo de LED
+  if (parpadeosRestantes > 0 && tiempoActual - tiempoParpadeo >= 150) {
+    estadoLED = !estadoLED;
+    digitalWrite(LED_VENTANA, estadoLED);
+    tiempoParpadeo = tiempoActual;
+    if (!estadoLED) parpadeosRestantes--;
+  }
+
+  if (modoAutomatico) {
     if (tiempoActual - tiempoUltimaTemperatura >= intervaloTemperatura) {
       tiempoUltimaTemperatura = tiempoActual;
-
-      // Temperatura con dos decimales entre 15.00 y 35.00 °C
       temperatura = random(1500, 3501) / 100.0;
 
       Serial.print("Temperatura simulada: ");
@@ -58,14 +67,14 @@ void loop() {
       Serial.println(" °C");
 
       censadoTemperatura();
-
-      if (millis() - tiempoUltimoInformeEstado > intervaloEstado) {
-        informarStatus();
-      }
     }
   }
 
-  // Apagar el LED luego de 10 segundos si está encendido
+  // Chequeo exacto del estado
+  if (tiempoActual - tiempoUltimoInformeEstado >= intervaloEstado) {
+    informarStatus();
+  }
+
   if (ledEncendido && (tiempoActual - tiempoInicioLED >= duracionLED)) {
     ledEncendido = false;
     digitalWrite(LED_VENTANA, LOW);
@@ -83,42 +92,38 @@ void abrirVentana() {
 }
 
 void cerrarVentana() {
-    digitalWrite(LED_VENTANA, HIGH);
-    ledEncendido = true;
-    ventanaAbierta = false;
-    tiempoInicioLED = tiempoActual;
+  digitalWrite(LED_VENTANA, HIGH);
+  ledEncendido = true;
+  ventanaAbierta = false;
+  tiempoInicioLED = tiempoActual;
 }
 
-void censadoTemperatura(){
-  // Lógica de apertura/cierre
+void censadoTemperatura() {
   if (temperatura > 30.00 && !ventanaAbierta) {
     Serial.println("Temperatura muy alta: ABRIENDO ventana");
     bot.sendMessage(chat_id, "🍃 Motor activado: Abriendo ventana", "");
     abrirVentana();
-    
   } else if (temperatura < 20.00 && ventanaAbierta) {
     Serial.println("Temperatura muy baja: CERRANDO ventana");
     bot.sendMessage(chat_id, "🛑 Motor activado: Cerrando ventana", "");
     cerrarVentana();
-  } 
+  }
 }
 
-void informarStatus(){
+void informarStatus() {
   tiempoUltimoInformeEstado = millis();
   String msg = ventanaAbierta
     ? "🍃 La ventana está abierta\n"
     : "🔒 La ventana está cerrada\n";
   msg += String("🌡️ Temperatura: ") + String(temperatura, 2) + " °C";
-  bot.sendMessage(chat_id, msg, "");  
+  bot.sendMessage(chat_id, msg, "");
 }
 
-void parpadearLED(){
-  for (int i = 0; i < 3; i++) {
-    digitalWrite(LED_VENTANA, HIGH);
-    delay(150);
-    digitalWrite(LED_VENTANA, LOW);
-    delay(150);
-  }
+void iniciarParpadeo(int veces) {
+  parpadeosRestantes = veces;
+  tiempoParpadeo = millis();
+  estadoLED = false;
+  digitalWrite(LED_VENTANA, estadoLED);
 }
 
 void conectarWiFi() {
@@ -131,49 +136,47 @@ void conectarWiFi() {
   Serial.println();
   Serial.print("¡WiFi conectado! IP: ");
   Serial.println(WiFi.localIP());
-  client.setInsecure(); // para desarrollo
+  client.setInsecure();
   Serial.println(WiFi.status());
 }
 
-
-void telegram(){
+void telegram() {
   if (millis() - tiempoBotTelegram > 1000) {
     int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
     while (numNewMessages) {
-          for (int i = 0; i < numNewMessages; i++) {
-            String text = bot.messages[i].text;
+      for (int i = 0; i < numNewMessages; i++) {
+        String text = bot.messages[i].text;
 
-
-            if (text == "/status") {
-              informarStatus();
-            } else if (text == "/abrir" && !ventanaAbierta) {
-              bot.sendMessage(chat_id, "🔓 Abriendo ventana por comando", "");
-              Serial.println("Mensaje de telegram: ABRIENDO ventana");
-              parpadearLED();
-              abrirVentana();
-            } else if (text == "/cerrar" && ventanaAbierta) {
-              bot.sendMessage(chat_id, "🔒 Cerrando ventana por comando", "");
-              Serial.println("Mensaje de telegram: CERRANDO ventana");
-              parpadearLED();
-              cerrarVentana();
-            } else if (text == "/cerrar" || text == "/abrir"){
-              bot.sendMessage(chat_id, "👍 La ventana ya está en ese estado", "");
-            } else if (text == "/reanudar") {
-              modoAutomatico = true;
-              bot.sendMessage(chat_id, "🤖🌡 Automático activado", "");
-              parpadearLED();
-              Serial.println("Automatico: ON");
-            } else if (text == "/pausar") {
-              modoAutomatico = false;
-              bot.sendMessage(chat_id, "🤖💤 Automático pausado", "");
-              parpadearLED();
-              Serial.println("Automatico: OFF");
-            } else {
-              bot.sendMessage(chat_id, "❌ Comando invalido", "");
-            } 
-          }
-          numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+        if (text == "/status") {
+          informarStatus();
+        } else if (text == "/abrir" && !ventanaAbierta) {
+          bot.sendMessage(chat_id, "🔓 Abriendo ventana por comando", "");
+          Serial.println("Mensaje de telegram: ABRIENDO ventana");
+          iniciarParpadeo(3);
+          abrirVentana();
+        } else if (text == "/cerrar" && ventanaAbierta) {
+          bot.sendMessage(chat_id, "🔒 Cerrando ventana por comando", "");
+          Serial.println("Mensaje de telegram: CERRANDO ventana");
+          iniciarParpadeo(3);
+          cerrarVentana();
+        } else if (text == "/cerrar" || text == "/abrir") {
+          bot.sendMessage(chat_id, "👍 La ventana ya está en ese estado", "");
+        } else if (text == "/reanudar") {
+          modoAutomatico = true;
+          bot.sendMessage(chat_id, "🤖🌡 Automático activado", "");
+          iniciarParpadeo(3);
+          Serial.println("Automatico: ON");
+        } else if (text == "/pausar") {
+          modoAutomatico = false;
+          bot.sendMessage(chat_id, "🤖🌪 Automático pausado", "");
+          iniciarParpadeo(3);
+          Serial.println("Automatico: OFF");
+        } else {
+          bot.sendMessage(chat_id, "❌ Comando invalido", "");
         }
-        tiempoBotTelegram = millis();
       }
+      numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+    }
+    tiempoBotTelegram = millis();
+  }
 }
