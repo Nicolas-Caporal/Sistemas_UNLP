@@ -50,6 +50,14 @@ public class EmpleadoPasante {
 
 Consiste en hacer los atributos privados, y hacer métodos de acceso para los mismos.
 En este caso no hace falta hacer getters y setters (por ahora) ya que las v.i no se usan desde el resto de las clases. Hacerlo sería romper con el encapsulamiento.
+Mecánica:
+* Crear funciones de encapsulación para leer y modificar la variable.
+* Ejecutar verificaciones estáticas (análisis de código).
+* Reemplaza cada referencia directa a la variable con una llamada a la función de encapsulación correspondiente. Prueba después de cada reemplazo.
+* Restringe la visibilidad de la variable (ej., de public a private).
+* Si no es posible bloquear el acceso por completo, renombra la variable temporalmente para detectar referencias restantes mediante pruebas.
+* Prueba nuevamente.
+* Si el valor de la variable es un registro, considera aplicar Encapsulate Record.
 
 ```java
 public class EmpleadoTemporario {
@@ -101,6 +109,11 @@ public class EmpleadoPasante {
 ### Refactoring: Rename Method 
 
 Consiste en renombrar un método para que tengo un nombre correcto
+Mecanica simple:
+* Si estás eliminando un parámetro, asegúrate de que no se use en el cuerpo de la función.
+* Cambia la declaración del método a la deseada.
+* Encuentra todas las referencias a la declaración antigua y actualízalas a la nueva.
+* Compilar y testear.
 
 ```java
 public class EmpleadoTemporario {
@@ -221,6 +234,13 @@ public class EmpleadoPasante {
 ### Refactoring: Extract SuperClass
 
 Consiste en pasar a la superclase todo lo común de las subclases, para no repetir código
+Mecanica:
+* Crea una superclase vacía. Haz que las clases originales sean sus subclases.
+* Si es necesario, usar Change Function Declaration en los constructores.
+* Test.
+* Uno por uno, usar Pull up Constructor Body , Pull up Method y Pull up Field para mover elementos comunes a la superclase.
+* Examinar los métodos restantes en las subclases. Si hay partes comunes, usa Extraer Función seguido de Subir Método (350).
+* Revisa los clientes de las clases originales. Considera ajustarlos para que usen la interfaz de la superclase.
 
 ```java
 
