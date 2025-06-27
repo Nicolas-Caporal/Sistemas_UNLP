@@ -165,3 +165,9 @@ public class Document {
 // Resto del código que no importa
 }
 ```
+
+
+# Respuesta al P3:
+En el codigo original, se produce un error en el calculo de estadisticas, en el caso de que el promedio de letras por palabra no sea un numero entero. La funcion retorna long (int) por tanto los valores con decimales, se están redondeando dando un resultado incorrecto.
+
+Sí, el error sigue presente después de realizar los refactorings. Solucionar el error implicaría modificar el comportamiendo del programa; lo que no sería un refactoring ya que, según la definición vista en teoría, el refactoring es un proceso que mejora el diseño SIN MODIFICAR EL COMPORTAMIENTO.
