@@ -2868,5 +2868,5 @@ public class DescuentoFisica extends Descuento{
 ```java
 	// ni ganas, pero mirá a mi perro
 ```
-<img src="uml.png" alt="cooper" width="400"/>
+<img src="uml.jpg" alt="cooper" width="400"/>
 
