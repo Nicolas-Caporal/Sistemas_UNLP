@@ -3,9 +3,9 @@
 
 #define LED_RIEGO 2  // LED integrado
 
-// --- WiFi y MQTT ---
-const char* ssid = "*WiFi 2.4GHz";
-const char* password = "01234";
+// — WiFi y MQTT —
+const char* ssid       = "WiFi 2.4GHz";
+const char* password   = "01234";
 const char* mqttServer = "192.";
 const int   mqttPort   = 1883;
 const char* topicHum   = "invernadero/humedad";
@@ -14,126 +14,125 @@ const char* topicNivel = "invernadero/nivel";
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-// --- Parámetros de simulación ---
-const unsigned long simInterval = 5000;  // cada 5s
-unsigned long lastSim = 0;
+// — Parámetros de simulación —
+const unsigned long simInterval      = 5000;   // cada 5s
+const float           umbralHumedad  = 30.0;   // %
+const float           humBase        = 50.0;   // valor medio
+const float           humAmp         = 30.0;   // amplitud
+const unsigned long   periodoHum     = 90000;  // 90 s
+const float           consumoRiego   = 10.0;   // % por riego
+const unsigned long   demoraRecarga  = 30000;  // 30 s de espera
 
-const float umbralHumedad = 30.0;  // %
-const float humBase       = 50.0;  // valor medio de la senoide
-const float humAmp        = 30.0;  // amplitud
-const unsigned long periodoHum = 90000; // 1 min para un ciclo completo
-
-float humedad    = humBase;
-float nivelTanque = 100.0;  // %
-
-bool esperandoRecarga = false;
-unsigned long tiempoVacio = 0;
-const unsigned long demoraRecarga = 30000;  // 2 minutos
+// — Estado —
+float    humedad       = humBase;
+float    nivelTanque   = 100.0;
+bool     esperandoRecarga = false;
+unsigned long tiempoVacio  = 0;
+unsigned long lastSim       = 0;
 
 
-// --- Funciones de simulación ---
-float simularHumedad(unsigned long t){
-  // seno entre humBase±humAmp
-  float angle = 2.0 * PI * (t % periodoHum) / (float)periodoHum;
-  return humBase + humAmp * sin(angle);
-}
-
-void bajarNivelTanque(float consumo){
-  nivelTanque -= consumo;
-  if(nivelTanque <= 0){
-    nivelTanque = 0;
-    Serial.println("!! Tanque vacío !!");
-  }
-}
-
-void llenarTanque(){
-  nivelTanque = 100.0;
-  Serial.println("Tanque recargado al 100%");
-}
-
-// --- Publicar por MQTT ---
-void publicar(const char* topic, float valor){
-  char buf[16];
-  dtostrf(valor, 5, 2, buf);
-  client.publish(topic, buf);
-  Serial.printf("MQTT ► %s = %s\n", topic, buf);
-}
-
-// --- Setup y Loop ---
-void setup(){
-  Serial.begin(115200);
-  delay(500);
-  pinMode(LED_RIEGO, OUTPUT);
-
-  // Conexión WiFi
+// — Conexiones —
+void conectarWiFi() {
   WiFi.begin(ssid, password);
+  Serial.print("Conectando WiFi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("\nWiFi OK");
+  Serial.println(" OK");
+}
 
-  // Conexión MQTT
+void conectarMQTT() {
   client.setServer(mqttServer, mqttPort);
+  Serial.printf("Conectando MQTT a %s:%d", mqttServer, mqttPort);
   while (!client.connected()) {
-    Serial.print("Conectando MQTT a ");
-Serial.print(mqttServer);
-Serial.print(":");
-Serial.println(mqttPort);
-
     if (client.connect("ESP32-simulador")) {
-      Serial.println("MQTT OK");
+      Serial.println(" ✓");
     } else {
-      Serial.print("MQTT Err: ");
+      Serial.print(" Err ");
       Serial.print(client.state());
-      Serial.println(" – reintento en 2s");
+      Serial.println(" – reintento 2s");
       delay(2000);
     }
   }
 }
 
 
-void loop(){
-  unsigned long now = millis();
+// — Simulación — 
+float leerHumedadVirtual(unsigned long t) {
+  // Esto se reemplazará por sensor real
+  float angle = 2 * PI * (t % periodoHum) / (float)periodoHum;
+  return humBase + humAmp * sin(angle);
+}
 
-  // reconexión MQTT si hace falta
-  if(!client.connected()) client.connect("ESP32-simulador");
-  client.loop();
-
-  // simulación periódica
-  if(now - lastSim >= simInterval){
-    lastSim = now;
-
-    // 1) calculo humedad
-    humedad = simularHumedad(now);
-    Serial.printf("Humedad: %.2f %%\n", humedad);
-
-    // 2) si bajo umbral, riego y bajo nivel
-    if(humedad < umbralHumedad){
-      digitalWrite(LED_RIEGO, HIGH);
-      float consumo = 10.0;        // p.ej. 5% cada riego
-      bajarNivelTanque(consumo);
-    } else {
-      digitalWrite(LED_RIEGO, LOW);
+void procesarRiego(float h) {
+  if (h < umbralHumedad) {
+    digitalWrite(LED_RIEGO, HIGH);
+    nivelTanque -= consumoRiego;
+    if (nivelTanque <= 0) {
+      nivelTanque = 0;
+      Serial.println("!! Tanque vacío !!");
     }
+  } else {
+    digitalWrite(LED_RIEGO, LOW);
+  }
+}
 
-    // 3) gestionar recarga
+void procesarRecarga(unsigned long now) {
   if (nivelTanque <= 0 && !esperandoRecarga) {
     esperandoRecarga = true;
     tiempoVacio = now;
     Serial.println("⚠️ Tanque vacío. Esperando recarga...");
   }
-
-  if (esperandoRecarga && now - tiempoVacio >= demoraRecarga) {
-    llenarTanque();
+  if (esperandoRecarga && (now - tiempoVacio >= demoraRecarga)) {
+    nivelTanque = 100.0;
     esperandoRecarga = false;
+    Serial.println("🔄 Tanque recargado al 100%");
   }
+}
 
+
+// — Publicación MQTT —
+void publicarDato(const char* topic, float valor) {
+  char buf[16];
+  dtostrf(valor, 5, 2, buf);
+  client.publish(topic, buf);
+  Serial.printf("MQTT ► %s = %s\n", topic, buf);
+}
+
+void publicarHumedadYNivel() {
+  publicarDato(topicHum, humedad);
+  publicarDato(topicNivel, nivelTanque);
+}
+
+
+// — Setup & Loop —
+void setup() {
+  Serial.begin(115200);
+  delay(500);
+  pinMode(LED_RIEGO, OUTPUT);
+
+  conectarWiFi();
+  conectarMQTT();
+}
+
+void loop() {
+  unsigned long now = millis();
+
+  if (!client.connected()) conectarMQTT();
+  client.loop();
+
+  if (now - lastSim >= simInterval) {
+    lastSim = now;
+
+    humedad = leerHumedadVirtual(now);
+    Serial.printf("Humedad: %.2f %%\n", humedad);
+
+    procesarRiego(humedad);
+    procesarRecarga(now);
 
     Serial.printf("Nivel tanque: %.2f %%\n\n", nivelTanque);
 
-    // 4) enviar por MQTT
-    publicar(topicHum, humedad);
-    publicar(topicNivel, nivelTanque);
+    publicarHumedadYNivel();
   }
 }
