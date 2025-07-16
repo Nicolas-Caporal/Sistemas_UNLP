@@ -1,0 +1,1 @@
+{"apiVersion":1,"contactPoints":[{"orgId":1,"name":"Telegram_Agua","receivers":[{"uid":"cerwkhbksc83kd","type":"telegram","settings":{"bottoken":"token","chatid":"7144472705","disable_notification":false,"disable_web_page_preview":false,"message":"¡Hay que llenar el tanque!","protect_content":false},"disableResolveMessage":false}]}]}

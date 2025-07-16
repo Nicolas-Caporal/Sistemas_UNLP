@@ -1,0 +1,165 @@
+[
+    {
+        "id": "6c3ed050f9fdb9f4",
+        "type": "tab",
+        "label": "Flujo 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "84936475ee33c39a",
+        "type": "mqtt in",
+        "z": "6c3ed050f9fdb9f4",
+        "name": "",
+        "topic": "invernadero/humedad",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "248dfbffb7f9caa5",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 280,
+        "y": 280,
+        "wires": [
+            [
+                "f487347bad27f7e8"
+            ]
+        ]
+    },
+    {
+        "id": "9abed7a0159e6975",
+        "type": "mqtt in",
+        "z": "6c3ed050f9fdb9f4",
+        "name": "",
+        "topic": "invernadero/nivel",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "248dfbffb7f9caa5",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 300,
+        "y": 360,
+        "wires": [
+            [
+                "f487347bad27f7e8"
+            ]
+        ]
+    },
+    {
+        "id": "cf1df339b0fa1b39",
+        "type": "influxdb out",
+        "z": "6c3ed050f9fdb9f4",
+        "influxdb": "066748876d125fea",
+        "name": "Base de datos",
+        "measurement": "invernadero",
+        "precision": "",
+        "retentionPolicy": "",
+        "database": "invernadero",
+        "precisionV18FluxV20": "ms",
+        "retentionPolicyV18Flux": "",
+        "org": "organisation",
+        "bucket": "bucket",
+        "x": 940,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "d7c35f1be375613a",
+        "type": "function",
+        "z": "6c3ed050f9fdb9f4",
+        "name": "parsear mqtt a influx",
+        "func": "const partes = msg.topic.split(\"/\");\nconst campo = partes[1]; // \"humedad\" o \"nivel\"\n\n\nmsg.payload = {\n  humedad: msg.payload[\"invernadero/humedad\"],\n  nivel: msg.payload[\"invernadero/nivel\"],\n  maceta: \"1\"\n};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 720,
+        "y": 320,
+        "wires": [
+            [
+                "cf1df339b0fa1b39"
+            ]
+        ]
+    },
+    {
+        "id": "f487347bad27f7e8",
+        "type": "join",
+        "z": "6c3ed050f9fdb9f4",
+        "name": "",
+        "mode": "custom",
+        "build": "object",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "useparts": false,
+        "accumulate": true,
+        "timeout": "5",
+        "count": "2",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 510,
+        "y": 320,
+        "wires": [
+            [
+                "d7c35f1be375613a"
+            ]
+        ]
+    },
+    {
+        "id": "248dfbffb7f9caa5",
+        "type": "mqtt-broker",
+        "name": "Docker local",
+        "broker": "192.168.0.69",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "066748876d125fea",
+        "type": "influxdb",
+        "hostname": "192.168.0.69",
+        "port": 8086,
+        "protocol": "http",
+        "database": "invernadero",
+        "name": "invernadero",
+        "usetls": false,
+        "tls": "",
+        "influxdbVersion": "1.x",
+        "url": "http://localhost:8086",
+        "timeout": 10,
+        "rejectUnauthorized": true
+    }
+]
